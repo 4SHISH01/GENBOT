@@ -21,7 +21,8 @@ async def setup_cogs():
         "cogs.whitelist",
         "cogs.gen",
         "cogs.vouch",
-        "cogs.admin"
+        "cogs.admin",
+        "cogs.premiumgen"
     ]
     for cog in cogs:
         try:
