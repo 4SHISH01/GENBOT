@@ -126,7 +126,7 @@ class PremiumGen(commands.Cog):
         # Send the panel
         panel = discord.Embed(
             title="💎 Premium Generator",
-            description="Select **PMCFA** or **STEAM** below.\nCooldown: **10 min**",
+            description="Select AN Item below.\nCooldown: **10 min**",
             color=discord.Color.gold()
         )
         await ctx.send(embed=panel, view=PremiumView(self))
