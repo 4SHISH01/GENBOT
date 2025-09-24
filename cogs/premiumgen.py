@@ -6,7 +6,7 @@ from config import PREFIX, OWNER_ID
 
 USERS_FILE = "data/users.json"
 GENERATED_FILE = "data/generated.json"
-COOLDOWN_TIME = 3600  # 1 hour (in seconds)
+COOLDOWN_TIME = 600  # 1 hour (in seconds)
 
 
 class PremiumGen(commands.Cog):
