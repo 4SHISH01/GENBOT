@@ -118,10 +118,15 @@ class PremiumGen(commands.Cog):
             async def steam_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
                 await self.send_item(interaction, "STEAM")
 
+            @discord.ui.button(label="ULTIMATE", style=discord.ButtonStyle.green)
+            async def ultimate_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+                await self.send_item(interaction, "ULTIMATE")
+
+
         # Send the panel
         panel = discord.Embed(
             title="💎 Premium Generator",
-            description="Select **PMCFA** or **STEAM** below.\nCooldown: **1 hour**",
+            description="Select **PMCFA** or **STEAM** below.\nCooldown: **10 min**",
             color=discord.Color.gold()
         )
         await ctx.send(embed=panel, view=PremiumView(self))
