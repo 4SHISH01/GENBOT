@@ -1,15 +1,12 @@
-# cogs/premiumgen.py
 import discord
 from discord.ext import commands
-import json
-import asyncio
-from config import PREFIX, OWNER_ID
+import json, asyncio, os, time
 
 USERS_FILE = "data/users.json"
-GENERATED_FILE = "data/generated.json"
-COOLDOWN_TIME = 3600  # 1 hour in seconds
+STOCK_FILE = "data/generated.json"
+VOUCH_CHANNEL_ID = 1417034611116212305   # <== CHANGE THIS
 
-class PremiumGen(commands.Cog):
+class FreeGen(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -27,100 +24,111 @@ class PremiumGen(commands.Cog):
         with open(USERS_FILE, "w") as f:
             json.dump(data, f, indent=4)
 
-    def load_generated(self):
-        try:
-            with open(GENERATED_FILE, "r") as f:
-                return json.load(f)
-        except:
+    def load_stock(self):
+        if not os.path.exists(STOCK_FILE):
             return {}
+        with open(STOCK_FILE, "r") as f:
+            return json.load(f)
 
-    def save_generated(self, data):
-        with open(GENERATED_FILE, "w") as f:
+    def save_stock(self, data):
+        with open(STOCK_FILE, "w") as f:
             json.dump(data, f, indent=4)
 
-    def is_premium(self, user_id):
-        users = self.load_users()
-        return user_id in users.get("premium", [])
-
-    def check_cooldown(self, user_id):
+    # -----------------------
+    # Core: Send Item
+    # -----------------------
+    async def send_item(self, interaction: discord.Interaction, category: str):
         users = self.load_users()
         cooldowns = users.get("cooldowns", {})
-        last_time = cooldowns.get(str(user_id), 0)
-        return (asyncio.get_event_loop().time() - last_time) < COOLDOWN_TIME
+        now = time.time()
+        uid = str(interaction.user.id)
 
-    def set_cooldown(self, user_id):
-        users = self.load_users()
-        if "cooldowns" not in users:
-            users["cooldowns"] = {}
-        users["cooldowns"][str(user_id)] = asyncio.get_event_loop().time()
+        # Cooldown check
+        if uid in cooldowns and now - cooldowns[uid] < 3600:
+            remain = int(3600 - (now - cooldowns[uid]))
+            return await interaction.response.send_message(
+                f"⏳ You must wait **{remain//60}m {remain%60}s** before generating again.",
+                ephemeral=True
+            )
+
+        # Whitelist / Bypass check
+        if (
+            interaction.user.id not in users.get("whitelist", [])
+            and interaction.user.id not in users.get("bypass", [])
+        ):
+            return await interaction.response.send_message(
+                "❌ You are not whitelisted to use the free generator.",
+                ephemeral=True
+            )
+
+        stock = self.load_stock()
+        category = category.upper()
+
+        # Stock check
+        if category not in stock or len(stock[category]) == 0:
+            return await interaction.response.send_message(
+                f"⚠️ No stock available for `{category}`.",
+                ephemeral=True
+            )
+
+        # Pop an item
+        item = stock[category].pop(0)
+        self.save_stock(stock)
+
+        # Update cooldown
+        cooldowns[uid] = now
+        users["cooldowns"] = cooldowns
         self.save_users(users)
 
-    # -----------------------
-    # Premium gen command
-    # -----------------------
-    @commands.command()
-    async def premiumgen(self, ctx):
-        user_id = ctx.author.id
-
-        if not self.is_premium(user_id):
-            return await ctx.send("❌ You are not a premium user. Contact an admin to get access.")
-
-        if self.check_cooldown(user_id):
-            return await ctx.send("⏳ You can only use this command once per hour. Wait before generating again.")
-
-        # Load generated data
-        gen_data = self.load_generated()
-        categories = ["PMCFA", "STEAM"]
-
-        # Create a button view
-        class PremiumView(discord.ui.View):
-            def __init__(self):
-                super().__init__(timeout=60)  # buttons active for 60 seconds
-                self.value = None
-
-            async def disable_buttons(self):
-                for child in self.children:
-                    child.disabled = True
-
-            @discord.ui.button(label="PMCFA", style=discord.ButtonStyle.success)
-            async def pmcfa_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-                await self.send_item(interaction, "PMCFA")
-
-            @discord.ui.button(label="STEAM", style=discord.ButtonStyle.success)
-            async def steam_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-                await self.send_item(interaction, "STEAM")
-
-            async def send_item(self, interaction: discord.Interaction, category: str):
-                items = gen_data.get(category, [])
-                if not items:
-                    await interaction.response.send_message(f"⚠️ No items left in `{category}`.", ephemeral=True)
-                    return
-
-                # Pop the first item
-                item = items.pop(0)
-                self.disable_buttons()  # disable buttons after use
-                # Save updated generated.json
-                PremiumGen.save_generated(self, gen_data)
-                self.disable_buttons()
-                # Send DM to user
-                try:
-                    await interaction.user.send(f"Here is your {category} item: `{item}`")
-                    await interaction.response.send_message(f"✅ {category} key sent to your DMs!", ephemeral=False)
-                    # Set cooldown
-                    PremiumGen.set_cooldown(self, interaction.user.id)
-                except discord.Forbidden:
-                    await interaction.response.send_message("❌ I cannot DM you. Enable DMs and try again.", ephemeral=True)
-
-        # Send the message with buttons
-        embed = discord.Embed(
-            title="🎁 Premium Generator",
-            description="Select a category below to generate your item (1 per hour).",
-            color=discord.Color.gold()
+        # ✅ Success Embed
+        success_embed = discord.Embed(
+            title="<a:GD_3ShineheartG:1420415318249046079> Account Generated Successfulyy!",
+            description=f"** <a:upload:1420412079877259398> Your {category} Account has been sent in your dms! \n <a:blue_sparkle:1416726626695381042> New Account Generated By: {interaction.user} \n <a:blue_sparkle:1416726626695381042> Genrated Item: {category} \n  Please Vouch Or you'll blacklisted!",
+            color=discord.Color.green()
         )
-        await ctx.send(embed=embed, view=PremiumView())
+        success_embed.set_footer(text=f"Generated by {interaction.user}")
+        await interaction.response.send_message(embed=success_embed, ephemeral=False)
+
+        # Vouch reminder
+        vouch_channel = interaction.guild.get_channel(VOUCH_CHANNEL_ID)
+        if vouch_channel:
+            await interaction.followup.send(
+                f"✅ Please vouch in {vouch_channel.mention} to keep using the generator!",
+                ephemeral=False
+            )
+
+    # -----------------------
+    # Panel Command
+    # -----------------------
+    @commands.command(name="gen")
+    async def gen_command(self, ctx):
+        """Send the free gen panel with buttons"""
+        view = discord.ui.View(timeout=120)
+
+        # Create button callbacks dynamically
+        for cat in ["MCFA", "CRUNCHYROLL", "XBOX"]:
+            async def make_callback(category):
+                async def callback(interaction: discord.Interaction):
+                    await self.send_item(interaction, category)
+                    # Disable buttons after one use
+                    for b in view.children:
+                        b.disabled = True
+                    await interaction.message.edit(view=view)
+                return callback
+
+            btn = discord.ui.Button(label=cat, style=discord.ButtonStyle.green)
+            btn.callback = await make_callback(cat)
+            view.add_item(btn)
+
+        panel_embed = discord.Embed(
+            title="🎯 Free Generator",
+            description="Click a button to generate a stock item.\n**Cooldown:** 1 hour",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=panel_embed, view=view)
 
 # -----------------------
-# Setup function
+# Setup
 # -----------------------
 async def setup(bot):
-    await bot.add_cog(PremiumGen(bot))
+    await bot.add_cog(FreeGen(bot))
