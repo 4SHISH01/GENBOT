@@ -22,7 +22,8 @@ async def setup_cogs():
         "cogs.gen",
         "cogs.vouch",
         "cogs.admin",
-        "cogs.premiumgen"
+        "cogs.premiumgen",
+        "cogs.mod"
     ]
     for cog in cogs:
         try:
