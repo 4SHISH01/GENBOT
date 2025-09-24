@@ -271,51 +271,50 @@ class Admin(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @commands.command(name="showstock")
-    async def show_stock(self, ctx, category: str = None):
-        """Show all stock or a specific category (admins only)."""
-        users = self.load_users()
-        admins = users.get("admins", [])
-        if ctx.author.id not in admins and not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ You are not allowed to use this command.")
+   @commands.command(name="showstock")
+async def show_stock(self, ctx, category: str = None):
+    """Show only the number of items in stock (admins/owner only)."""
+    users = self.load_users()
+    admins = users.get("admins", [])
+    if ctx.author.id not in admins and not self.is_owner(ctx.author.id):
+        return await ctx.send("❌ You are not allowed to use this command.")
 
-        try:
-            with open("data/generated.json", "r") as f:
-                gen_data = json.load(f)
-        except FileNotFoundError:
-            return await ctx.send("⚠️ No stock data found.")
+    try:
+        with open("data/generated.json", "r") as f:
+            gen_data = json.load(f)
+    except FileNotFoundError:
+        return await ctx.send("⚠️ No stock data found.")
 
-        if not gen_data:
-            return await ctx.send("⚠️ The stock is currently empty.")
+    if not gen_data:
+        return await ctx.send("⚠️ The stock is currently empty.")
 
-        # If a specific category is requested
-        if category:
-            category = category.upper()
-            if category not in gen_data or not gen_data[category]:
-                return await ctx.send(f"⚠️ No stock found for `{category}`.")
-            embed = discord.Embed(
-                title=f"📦 Stock for {category}",
-                description="\n".join(gen_data[category]),
-                color=discord.Color.blue()
-            )
-            await ctx.send(embed=embed)
-            return
-
-        # Otherwise show all categories
+    # If a specific category is requested
+    if category:
+        category = category.upper()
+        count = len(gen_data.get(category, []))
+        if count == 0:
+            return await ctx.send(f"⚠️ No stock available for `{category}`.")
         embed = discord.Embed(
-            title="📦 All Stock Categories",
-            color=discord.Color.green()
+            title=f"📦 Stock Count – {category}",
+            description=f"**{count}** item(s) currently available.",
+            color=discord.Color.blue()
         )
-        for cat, items in gen_data.items():
-            item_count = len(items)
-            preview = ", ".join(items[:5]) + (" ..." if item_count > 5 else "")
-            embed.add_field(
-                name=f"{cat} ({item_count} items)",
-                value=preview or "No items",
-                inline=False
-            )
+        return await ctx.send(embed=embed)
 
-        await ctx.send(embed=embed)
+    # Otherwise show all category counts
+    embed = discord.Embed(
+        title="📦 Stock Counts by Category",
+        color=discord.Color.green()
+    )
+    for cat, items in gen_data.items():
+        embed.add_field(
+            name=cat,
+            value=f"**{len(items)}** item(s) available",
+            inline=False
+        )
+
+    await ctx.send(embed=embed)
+
 
         # -----------------------
     # Premium User Management
