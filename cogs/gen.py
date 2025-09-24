@@ -44,7 +44,7 @@ class FreeGen(commands.Cog):
         uid = str(interaction.user.id)
 
         # Cooldown check
-        if uid in cooldowns and now - cooldowns[uid] < 3600:
+        if uid in cooldowns and now - cooldowns[uid] < 600:
             remain = int(3600 - (now - cooldowns[uid]))
             return await interaction.response.send_message(
                 f"⏳ You must wait **{remain//60}m {remain%60}s** before generating again.",
