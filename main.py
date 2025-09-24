@@ -1,7 +1,7 @@
 # main.py
 import discord
 from discord.ext import commands
-from config import BOT_TOKEN, PREFIX
+from config import PREFIX
 
 # Intents
 intents = discord.Intents.all()
