@@ -316,6 +316,7 @@ async def show_stock(self, ctx, category: str = None):
     await ctx.send(embed=embed)
 
 
+
         # -----------------------
     # Premium User Management
     # -----------------------
