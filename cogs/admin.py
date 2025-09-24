@@ -195,10 +195,6 @@ class Admin(commands.Cog):
     # -----------------------
     @commands.command(name="showstock")
     async def show_stock(self, ctx, category: str = None):
-        users = self.load_users()
-        admins = users.get("admins", [])
-        if ctx.author.id not in admins and not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ You are not allowed to use this command.")
         try:
             with open(GENERATED_FILE, "r") as f:
                 gen_data = json.load(f)
