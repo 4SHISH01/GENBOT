@@ -1,7 +1,9 @@
 # main.py
 import discord
+import os
 from discord.ext import commands
 from config import PREFIX
+token = os.getenv('bot')
 
 # Intents
 intents = discord.Intents.all()
@@ -32,7 +34,7 @@ async def setup_cogs():
 async def main():
     async with bot:
         await setup_cogs()
-        await bot.start(BOT_TOKEN)
+        await bot.start(token)
 
 # Run the async main
 import asyncio
