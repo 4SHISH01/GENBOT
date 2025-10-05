@@ -30,13 +30,13 @@ class Admin(commands.Cog):
         return user_id == OWNER_ID
 
     # -----------------------
-    # Owner-only commands
+    # Cog reload
     # -----------------------
     @commands.command()
     async def reload(self, ctx, cog_name: str = None):
-        """Reload a specific cog."""
+        """Reload a specific cog (owner-only)."""
         if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ You are not allowed to use this command.")
+            return await ctx.send("❌ Only the owner can use this command.")
         if not cog_name:
             return await ctx.send(f"❌ Usage: `{PREFIX}reload <cog>`")
         try:
@@ -46,15 +46,20 @@ class Admin(commands.Cog):
         except Exception as e:
             await ctx.send(f"❌ Could not reload `{cog_name}`.\nError: {e}")
 
+    # -----------------------
+    # Whitelist management
+    # -----------------------
     @commands.command()
     async def managewhitelist(self, ctx, user: discord.Member = None, action: str = None):
-        """Add or remove a user from the whitelist."""
-        if not self.is_owner(ctx.author.id):
+        """Add or remove users from whitelist (admin/owner)."""
+        users = self.load_users()
+        admins = users.get("admins", [])
+        if ctx.author.id not in admins and not self.is_owner(ctx.author.id):
             return await ctx.send("❌ You are not allowed to use this command.")
+
         if not user or not action:
             return await ctx.send(f"❌ Usage: `{PREFIX}managewhitelist @user add/remove`")
 
-        users = self.load_users()
         whitelist = users.get("whitelist", [])
 
         if action.lower() == "add":
@@ -74,15 +79,20 @@ class Admin(commands.Cog):
         else:
             await ctx.send("❌ Invalid action! Use `add` or `remove`.")
 
+    # -----------------------
+    # Bypass management
+    # -----------------------
     @commands.command()
     async def bypass(self, ctx, user: discord.Member = None, action: str = None):
-        """Add or remove a user from the bypass list."""
-        if not self.is_owner(ctx.author.id):
+        """Add or remove a user from bypass list (admin/owner)."""
+        users = self.load_users()
+        admins = users.get("admins", [])
+        if ctx.author.id not in admins and not self.is_owner(ctx.author.id):
             return await ctx.send("❌ You are not allowed to use this command.")
+
         if not user or not action:
             return await ctx.send(f"❌ Usage: `{PREFIX}bypass @user add/remove`")
 
-        users = self.load_users()
         bypass_list = users.get("bypass", [])
 
         if action.lower() == "add":
@@ -102,11 +112,14 @@ class Admin(commands.Cog):
         else:
             await ctx.send("❌ Invalid action! Use `add` or `remove`.")
 
+    # -----------------------
+    # Admin management
+    # -----------------------
     @commands.command()
     async def addadmin(self, ctx, user: discord.Member = None):
-        """Add a new admin."""
+        """Add a new admin (owner-only)."""
         if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ You are not allowed to use this command.")
+            return await ctx.send("❌ Only the owner can use this command.")
         if not user:
             return await ctx.send(f"❌ Usage: `{PREFIX}addadmin @user`")
 
@@ -121,9 +134,9 @@ class Admin(commands.Cog):
 
     @commands.command()
     async def removeadmin(self, ctx, user: discord.Member = None):
-        """Remove an admin."""
+        """Remove an admin (owner-only)."""
         if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ You are not allowed to use this command.")
+            return await ctx.send("❌ Only the owner can use this command.")
         if not user:
             return await ctx.send(f"❌ Usage: `{PREFIX}removeadmin @user`")
 
@@ -137,7 +150,7 @@ class Admin(commands.Cog):
         await ctx.send(f"✅ {user} removed from admins.")
 
     # -----------------------
-    # Admin & Owner Viewable
+    # View lists
     # -----------------------
     @commands.command()
     async def listadmins(self, ctx):
@@ -156,10 +169,11 @@ class Admin(commands.Cog):
 
     @commands.command()
     async def listwhitelist(self, ctx):
-        """List all whitelisted users (owner-only)."""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ You are not allowed to use this command.")
+        """List whitelisted users (admin/owner)."""
         users = self.load_users()
+        admins = users.get("admins", [])
+        if ctx.author.id not in admins and not self.is_owner(ctx.author.id):
+            return await ctx.send("❌ You are not allowed to use this command.")
         whitelist = users.get("whitelist", [])
         if not whitelist:
             return await ctx.send("⚠️ No users are whitelisted.")
@@ -173,28 +187,31 @@ class Admin(commands.Cog):
 
     @commands.command()
     async def listbypass(self, ctx):
-        """List all bypass users (owner-only)."""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ You are not allowed to use this command.")
+        """List bypassed users (admin/owner)."""
         users = self.load_users()
-        bypass_list = users.get("bypass", [])
-        if not bypass_list:
+        admins = users.get("admins", [])
+        if ctx.author.id not in admins and not self.is_owner(ctx.author.id):
+            return await ctx.send("❌ You are not allowed to use this command.")
+        bypass = users.get("bypass", [])
+        if not bypass:
             return await ctx.send("⚠️ No users are in bypass list.")
         embed = discord.Embed(
             title="🛡️ Bypassed Users",
-            description="\n".join([f"<@{uid}>" for uid in bypass_list]),
+            description="\n".join([f"<@{uid}>" for uid in bypass]),
             color=discord.Color.blue()
         )
-        embed.set_footer(text=f"Total: {len(bypass_list)} users")
+        embed.set_footer(text=f"Total: {len(bypass)} users")
         await ctx.send(embed=embed)
 
     # -----------------------
-    # Stock Management
+    # Stock commands
     # -----------------------
     @commands.command()
     async def addstock(self, ctx, category: str = None, *, items: str = None):
-        """Add items to stock (owner-only)."""
-        if not self.is_owner(ctx.author.id):
+        """Add stock (admin/owner)."""
+        users = self.load_users()
+        admins = users.get("admins", [])
+        if ctx.author.id not in admins and not self.is_owner(ctx.author.id):
             return await ctx.send("❌ You are not allowed to use this command.")
         if not category or not items:
             return await ctx.send(f"❌ Usage: `{PREFIX}addstock <category> <item1,item2,...>`")
@@ -206,7 +223,7 @@ class Admin(commands.Cog):
             gen_data = {}
 
         category = category.upper()
-        new_items = [item.strip() for item in items.split(",") if item.strip()]
+        new_items = [i.strip() for i in items.split(",") if i.strip()]
 
         if category not in gen_data:
             gen_data[category] = []
@@ -221,7 +238,6 @@ class Admin(commands.Cog):
             description=f"Added **{len(new_items)} items** to `{category}`.",
             color=discord.Color.green()
         )
-        embed.add_field(name="Items", value="\n".join(new_items), inline=False)
         await ctx.send(embed=embed)
 
     @commands.command(name="showstock")
@@ -234,7 +250,7 @@ class Admin(commands.Cog):
             return await ctx.send("⚠️ No stock data found.")
 
         if not gen_data:
-            return await ctx.send("⚠️ The stock is currently empty.")
+            return await ctx.send("⚠️ Stock is currently empty.")
 
         if category:
             category = category.upper()
@@ -248,29 +264,21 @@ class Admin(commands.Cog):
             )
             return await ctx.send(embed=embed)
 
-        embed = discord.Embed(
-            title="📦 Stock Counts by Category",
-            color=discord.Color.green()
-        )
+        embed = discord.Embed(title="📦 Stock Counts by Category", color=discord.Color.green())
         for cat, items in gen_data.items():
-            embed.add_field(
-                name=cat,
-                value=f"**{len(items)}** item(s) available",
-                inline=False
-            )
+            embed.add_field(name=cat, value=f"**{len(items)}** item(s) available", inline=False)
         await ctx.send(embed=embed)
 
     # -----------------------
-    # Premium User Management
+    # Premium users
     # -----------------------
     @commands.command(name="addpremium")
     async def add_premium(self, ctx, user: discord.Member = None):
-        """Add a premium user (owner-only)."""
+        """Add premium user (owner-only)."""
         if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ Only the Owner can use this command.")
+            return await ctx.send("❌ Only owner can use this command.")
         if not user:
             return await ctx.send(f"❌ Usage: `{PREFIX}addpremium @user`")
-
         users = self.load_users()
         premium = users.get("premium", [])
         if user.id in premium:
@@ -278,16 +286,15 @@ class Admin(commands.Cog):
         premium.append(user.id)
         users["premium"] = premium
         self.save_users(users)
-        await ctx.send(f"✅ {user.mention} has been added to premium users.")
+        await ctx.send(f"✅ {user.mention} added to premium users.")
 
     @commands.command(name="removepremium")
     async def remove_premium(self, ctx, user: discord.Member = None):
-        """Remove a premium user (owner-only)."""
+        """Remove premium user (owner-only)."""
         if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ Only the Owner can use this command.")
+            return await ctx.send("❌ Only owner can use this command.")
         if not user:
             return await ctx.send(f"❌ Usage: `{PREFIX}removepremium @user`")
-
         users = self.load_users()
         premium = users.get("premium", [])
         if user.id not in premium:
@@ -295,11 +302,11 @@ class Admin(commands.Cog):
         premium.remove(user.id)
         users["premium"] = premium
         self.save_users(users)
-        await ctx.send(f"✅ {user.mention} has been removed from premium users.")
+        await ctx.send(f"✅ {user.mention} removed from premium users.")
 
     @commands.command(name="listpremium")
     async def list_premium(self, ctx):
-        """List premium users (admins & owner only)."""
+        """List premium users (admin/owner)."""
         users = self.load_users()
         admins = users.get("admins", [])
         premium = users.get("premium", [])
@@ -316,59 +323,50 @@ class Admin(commands.Cog):
         await ctx.send(embed=embed)
 
     # -----------------------
-    # Utility
+    # Utilities
     # -----------------------
     @commands.command()
     async def ping(self, ctx):
-        """Check bot latency."""
+        """Check latency."""
         latency = round(self.bot.latency * 1000)
-        embed = discord.Embed(
+        await ctx.send(embed=discord.Embed(
             title="🏓 Pong!",
             description=f"Latency: **{latency} ms**",
             color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
+        ))
 
     # -----------------------
-    # Help Command
+    # Help
     # -----------------------
     @commands.command(name="adminhelp")
     async def admin_help(self, ctx):
-        """Show all admin commands (with owner/admin restrictions noted)."""
         embed = discord.Embed(
             title="🛠️ Admin Commands Help",
-            description=f"Prefix: `{PREFIX}`\nCommands marked 🔒 are owner-only.",
+            description=f"Prefix: `{PREFIX}`\n🔒 = Owner-only command.",
             color=discord.Color.orange()
         )
 
-        # Owner-only commands
         owner_cmds = [
-            ("reload <cog> 🔒", "Reload a cog without restarting the bot."),
-            ("managewhitelist @user add/remove 🔒", "Add or remove a user from whitelist."),
-            ("bypass @user add/remove 🔒", "Add or remove a user from bypass list."),
-            ("listwhitelist 🔒", "Show all whitelisted users."),
-            ("listbypass 🔒", "Show all bypassed users."),
-            ("addadmin @user 🔒", "Add a new admin."),
-            ("removeadmin @user 🔒", "Remove an admin."),
-            ("addpremium @user 🔒", "Add a user to premium access."),
-            ("removepremium @user 🔒", "Remove a user from premium access."),
-            ("addstock <category> <item1,item2,...> 🔒", "Add items to stock."),
+            ("reload <cog> 🔒", "Reload a cog."),
+            ("addadmin @user 🔒 / removeadmin @user 🔒", "Manage admins."),
+            ("addpremium @user 🔒 / removepremium @user 🔒", "Manage premium users."),
+            ("addstock <cat> <items> 🔒", "Add stock items."),
         ]
-        for name, desc in owner_cmds:
-            embed.add_field(name=f"{PREFIX}{name}", value=desc, inline=False)
-
-        # Public/Admin commands
-        public_cmds = [
-            ("listadmins", "List all current admins."),
-            ("listpremium", "Show all premium users."),
-            ("showstock", "Show all stock items (usable by everyone)."),
-            ("ping", "Check bot latency."),
-            ("modhelp", "Show Moderation Commands"),
+        admin_cmds = [
+            ("managewhitelist @user add/remove", "Manage whitelist."),
+            ("bypass @user add/remove", "Manage bypass list."),
+            ("listadmins", "Show all admins."),
+            ("listpremium", "Show premium users."),
+            ("listwhitelist", "Show whitelisted users."),
+            ("listbypass", "Show bypassed users."),
+            ("showstock", "Show stock counts."),
+            ("ping", "Check latency."),
         ]
-        for name, desc in public_cmds:
-            embed.add_field(name=f"{PREFIX}{name}", value=desc, inline=False)
 
-        embed.set_footer(text="🔒 = Supreme Owner only | All members can view this help")
+        for n, d in owner_cmds + admin_cmds:
+            embed.add_field(name=f"{PREFIX}{n}", value=d, inline=False)
+
+        embed.set_footer(text="🔒 = Owner-only")
         await ctx.send(embed=embed)
 
 
